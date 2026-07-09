@@ -83,14 +83,6 @@ resource "aws_security_group" "cloud_siem_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  ingress {
-    description = "Grafana dashboard"
-    from_port   = var.grafana_port
-    to_port     = var.grafana_port
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   egress {
     description = "Allow all outbound"
     from_port   = 0
@@ -102,6 +94,17 @@ resource "aws_security_group" "cloud_siem_sg" {
   tags = {
     Name = "cloud-siem-sg"
   }
+}
+
+resource "aws_security_group_rule" "grafana" {
+  count = var.enable_grafana ? 1 : 0
+
+  type              = "ingress"
+  from_port         = var.grafana_port
+  to_port           = var.grafana_port
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.cloud_siem_sg.id
 }
 
 resource "aws_iam_role" "cloud_siem_ec2_role" {

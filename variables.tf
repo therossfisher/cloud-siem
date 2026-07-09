@@ -16,7 +16,7 @@ variable "public_key_path" {
 }
 
 variable "admin_ssh_port" {
-  description = "Port for real admin SSH access (post-DShield-install)"
+  description = "Port for real admin SSH access"
   type        = number
   default     = 12222
 }
@@ -30,4 +30,29 @@ variable "grafana_port" {
 variable "bucket_name" {
   description = "Globally unique S3 bucket name for log storage"
   type        = string
+}
+
+variable "enable_dshield" {
+  description = "Enable DShield reporting to SANS ISC"
+  type        = bool
+  default     = false
+}
+
+variable "enable_grafana" {
+  description = "Deploy Grafana dashboard alongside the honeypot"
+  type        = bool
+  default     = true
+}
+
+variable "dshield_userid" {
+  description = "DShield user ID (required only if enable_dshield = true)"
+  type        = string
+  default     = ""
+}
+
+variable "dshield_authkey" {
+  description = "DShield auth key (required only if enable_dshield = true)"
+  type        = string
+  default     = ""
+  sensitive   = true
 }
