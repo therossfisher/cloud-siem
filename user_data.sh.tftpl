@@ -51,6 +51,11 @@ EOF
 
 ## bring up the stack - conditionally include Grafana based on terraform variable
 
+mkdir -p /home/ubuntu/cloud-siem/logs/cowrie
+mkdir -p /home/ubuntu/cloud-siem/logs/isc-agent
+chown -R ubuntu:ubuntu /home/ubuntu/cloud-siem/logs
+chmod -R 755 /home/ubuntu/cloud-siem/logs
+
 if [ "${enable_grafana}" = "true" ]; then
   docker compose --profile grafana up -d
 else
