@@ -147,6 +147,11 @@ resource "aws_iam_role_policy" "cloud_siem_s3_policy" {
           "s3:GetObject"
         ]
         Resource = "${aws_s3_bucket.cloud_siem_logs.arn}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = aws_s3_bucket.cloud_siem_logs.arn
       }
     ]
   })

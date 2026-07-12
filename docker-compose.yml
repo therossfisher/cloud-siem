@@ -8,7 +8,9 @@ services:
       - COWRIE_OUTPUT_DSHIELD_ENABLED=${ENABLE_DSHIELD}
       - COWRIE_OUTPUT_DSHIELD_USERID=${DSHIELD_USERID}
       - COWRIE_OUTPUT_DSHIELD_AUTH_KEY=${DSHIELD_AUTHKEY}
-  
+    volumes: 
+      - ./logs/cowrie:/cowrie/cowrie-git/var/log/cowrie
+
   isc-agent:
     build: .
     restart: always
@@ -17,7 +19,9 @@ services:
     environment:
       - DSHIELD_USERID=${DSHIELD_USERID}
       - DSHIELD_AUTHKEY=${DSHIELD_AUTHKEY}
-
+    volumes:
+      - ./logs/isc-agent:/srv/log
+  
   grafana:
     image: grafana/grafana:latest
     restart: always
