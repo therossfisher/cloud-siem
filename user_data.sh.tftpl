@@ -57,6 +57,27 @@ chown -R ubuntu:ubuntu /home/ubuntu/cloud-siem/logs/isc-agent
 chown -R 999:999 /home/ubuntu/cloud-siem/logs/cowrie
 chmod -R 755 /home/ubuntu/cloud-siem/logs
 
+## Generate a session timestamp and build S3 sync script
+
+SESSION_ID=$(date +%Y-%m-%d-%H%M)
+echo "$SESSION_ID" > /home/ubuntu/cloud-siem/.session_id
+
+cat > /home/ubuntu/cloud-siem/sync-logs.sh <<'SYNCEOF'
+#!/bin/bash
+SESSION_ID=$(cat /home/ubuntu/cloud-siem/.session_id)
+/usr/local/bin/aws s3 sync /home/ubuntu/cloud-siem/logs/ s3://${bucket_name}/$SESSION_ID/ --only-show-errors
+SYNCEOF
+
+chmod +x /home/ubuntu/cloud-siem/sync-logs.sh
+chown ubuntu:ubuntu /home/ubuntu/cloud-siem/sync-logs.sh /home/ubuntu/cloud-siem/.session_id
+
+## Schedule the sync every 5 minutes via cron, logging output so failures aren't silent
+
+(crontab -u ubuntu -l 2>/dev/null; echo "*/5 * * * * /home/ubuntu/cloud-siem/sync-logs.sh >> /home/ubuntu/cloud-siem/sync.log 2>&1") | crontab -u ubuntu -
+
+## Run one sync immediately so logs start shipping right away, not after the first 5-minute wait
+sudo -u ubuntu /home/ubuntu/cloud-siem/sync-logs.sh
+
 if [ "${enable_grafana}" = "true" ]; then
   docker compose --profile grafana up -d
 else
