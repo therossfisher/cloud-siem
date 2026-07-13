@@ -34,6 +34,7 @@ resource "aws_instance" "cloud_siem" {
     grafana_admin_user     = var.grafana_admin_user
     grafana_admin_password = var.grafana_admin_password
     enable_grafana         = var.enable_grafana
+    bucket_name            = var.bucket_name
   })
 
   tags = {
