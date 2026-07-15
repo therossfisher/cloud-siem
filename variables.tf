@@ -66,3 +66,34 @@ variable "dshield_authkey" {
   type        = string
   sensitive   = true
 }
+
+variable "enable_diy_canary" {
+  description = "Create a zero-permission IAM decoy user with EventBridge/SNS alerting"
+  type        = bool
+  default     = true
+}
+
+variable "canary_alert_email" {
+  description = "Email address to receive canary trip-wire alerts via SNS"
+  type        = string
+  default     = "fisher.ross1776@gmail.com"
+}
+
+variable "enable_thinkst_canary" {
+  description = "Deploy a Thinkst canarytokens.org AWS decoy key in Cowrie's filesystem (requires your own token)"
+  type        = bool
+  default     = false
+}
+
+variable "thinkst_canary_access_key_id" {
+  description = "Access key ID from your own canarytokens.org AWS Keys token (required only if enable_thinkst_canary = true)"
+  type        = string
+  default     = ""
+}
+
+variable "thinkst_canary_secret_access_key" {
+  description = "Secret access key from your own canarytokens.org AWS Keys token"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

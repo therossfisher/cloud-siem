@@ -11,6 +11,8 @@ services:
       - COWRIE_OUTPUT_JSONLOG_ENABLED=true
     volumes: 
       - ./logs/cowrie:/cowrie/cowrie-git/var/log/cowrie
+      - ./cowrie-config/etc:/cowrie/cowrie-git/etc
+      - ./cowrie-config/data:/cowrie/cowrie-git/data
 
   isc-agent:
     build: .

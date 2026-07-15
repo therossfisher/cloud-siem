@@ -35,6 +35,14 @@ resource "aws_instance" "cloud_siem" {
     grafana_admin_password = var.grafana_admin_password
     enable_grafana         = var.enable_grafana
     bucket_name            = var.bucket_name
+
+    enable_thinkst_canary            = var.enable_thinkst_canary
+    thinkst_canary_access_key_id     = var.thinkst_canary_access_key_id
+    thinkst_canary_secret_access_key = var.thinkst_canary_secret_access_key
+
+    enable_diy_canary            = var.enable_diy_canary
+    diy_canary_access_key_id     = var.enable_diy_canary ? aws_iam_access_key.canary_decoy[0].id : ""
+    diy_canary_secret_access_key = var.enable_diy_canary ? aws_iam_access_key.canary_decoy[0].secret : ""
   })
 
   tags = {
@@ -161,4 +169,71 @@ resource "aws_iam_role_policy" "cloud_siem_s3_policy" {
 resource "aws_iam_instance_profile" "cloud_siem_profile" {
   name = "cloud-siem-instance-profile"
   role = aws_iam_role.cloud_siem_ec2_role.name
+}
+
+# --- a DIY Canary: zero-permission decoy IAM user ---
+resource "aws_iam_user" "canary_decoy" {
+  count = var.enable_diy_canary ? 1 : 0
+  name  = "svc-backup-automation" # a boring name with some plausible deniability
+}
+
+resource "aws_iam_access_key" "canary_decoy" {
+  count = var.enable_diy_canary ? 1 : 0
+  user  = aws_iam_user.canary_decoy[0].name
+}
+# NOTE: no aws_iam_user_policy or policy attachment resource at all —
+# that's what makes this a zero-permission user. Nothing to attach.
+
+# --- SNS topic for canary alerts ---
+resource "aws_sns_topic" "canary_alerts" {
+  count = var.enable_diy_canary ? 1 : 0
+  name  = "cloud-siem-canary-alerts"
+}
+
+resource "aws_sns_topic_subscription" "canary_alerts_email" {
+  count     = var.enable_diy_canary ? 1 : 0
+  topic_arn = aws_sns_topic.canary_alerts[0].arn
+  protocol  = "email"
+  endpoint  = var.canary_alert_email
+}
+
+# --- EventBridge rule: fire on ANY API CALL made by decoy user ---
+resource "aws_cloudwatch_event_rule" "canary_tripwire" {
+  count       = var.enable_diy_canary ? 1 : 0
+  name        = "cloud-siem-canary-tripwire"
+  description = "Fires when the decoy IAM user makes any AWS API call"
+
+  event_pattern = jsonencode({
+    detail-type = ["AWS API Call via CloudTrail"]
+    detail = {
+      userIdentity = {
+        type     = ["IAMUser"]
+        userName = [aws_iam_user.canary_decoy[0].name]
+      }
+    }
+  })
+}
+
+resource "aws_cloudwatch_event_target" "canary_to_sns" {
+  count     = var.enable_diy_canary ? 1 : 0
+  rule      = aws_cloudwatch_event_rule.canary_tripwire[0].name
+  target_id = "canary-sns-alert"
+  arn       = aws_sns_topic.canary_alerts[0].arn
+}
+
+# --- Permission for EventBridge to actually publish to the SNS topic ---
+resource "aws_sns_topic_policy" "canary_alerts_policy" {
+  count = var.enable_diy_canary ? 1 : 0
+  arn   = aws_sns_topic.canary_alerts[0].arn
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "AllowEventBridgePublish"
+      Effect    = "Allow"
+      Principal = { Service = "events.amazonaws.com" }
+      Action    = "sns:Publish"
+      Resource  = aws_sns_topic.canary_alerts[0].arn
+    }]
+  })
 }

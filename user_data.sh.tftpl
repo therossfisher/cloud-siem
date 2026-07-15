@@ -39,6 +39,50 @@ cd /home/ubuntu
 git clone https://github.com/therossfisher/cloud-siem.git
 cd cloud-siem
 
+## Builds decoy AWS credentials file based on which canaries are enabled.
+## uses non-descriptive profile names purposefully: "default" and "backup-svc"
+
+CANARY_CREDS_FILE="/home/ubuntu/cloud-siem/canary-creds-tmp"
+> "$CANARY_CREDS_FILE"
+
+if [ "${enable_thinkst_canary}" = "true" ]; then
+  cat >> "$CANARY_CREDS_FILE" <<EOF
+[default]
+aws_access_key_id = ${thinkst_canary_access_key_id}
+aws_secret_access_key = ${thinkst_canary_secret_access_key}
+output = json
+region = us-east-1
+
+EOF
+fi
+
+if [ "${enable_diy_canary}" = "true" ]; then
+  DIY_PROFILE="default"
+  if [ "${enable_thinkst_canary}" = "true" ]; then
+    DIY_PROFILE="backup-svc"
+  fi
+  cat >> "$CANARY_CREDS_FILE" <<EOF
+[$DIY_PROFILE]
+aws_access_key_id = ${diy_canary_access_key_id}
+aws_secret_access_key = ${diy_canary_secret_access_key}
+output = json
+region = us-east-1
+
+EOF
+fi
+
+## Only touch the pickle if at least one canary is actually enabled.
+## If neither is on, the committed empty template stays exactly as-is,
+## which results in some random binary data being written to the file by cowrie
+if [ -s "$CANARY_CREDS_FILE" ]; then
+  python3 /home/ubuntu/cloud-siem/inject_canary.py \
+    /home/ubuntu/cloud-siem/cowrie-config/data/fs.pickle \
+    /root/.aws/credentials \
+    "$CANARY_CREDS_FILE"
+fi
+
+rm -f "$CANARY_CREDS_FILE"
+
 ## write terraform .env variables
 
 cat > .env <<EOF
