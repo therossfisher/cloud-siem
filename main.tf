@@ -29,6 +29,19 @@ resource "aws_instance" "cloud_siem" {
   iam_instance_profile   = aws_iam_instance_profile.cloud_siem_profile.name
   key_name               = aws_key_pair.cloud_siem_key.key_name
   vpc_security_group_ids = [aws_security_group.cloud_siem_sg.id]
+  ebs_optimized          = true
+  # Detailed monitoring is a paid CloudWatch feature not needed for this project's threat-intel goal; standard monitoring is sufficient.
+  # checkov:skip=CKV_AWS_126:Detailed monitoring not required for honeypot threat-intel use case
+  monitoring = false
+
+  metadata_options {
+    http_tokens = "required" # enforce IMDSv2 for security, blocks IMDSv1 SSRF-style attack path
+  }
+
+  root_block_device {
+    encrypted = true # encrypts EBS root volume at rest using default AWS-managed KMS key
+  }
+
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
     enable_dshield         = var.enable_dshield
     dshield_userid         = var.dshield_userid
@@ -79,6 +92,7 @@ resource "aws_security_group" "cloud_siem_sg" {
   name        = "cloud-siem-sg"
   description = "Security group for cloud-siem honeypot and admin access"
 
+  # checkov:skip=CKV_AWS_24:Intentional honeypot bait — Cowrie must be reachable on port 22 to attract SSH attackers
   ingress {
     description = "Cowrie honeypot SSH bait"
     from_port   = 22
@@ -87,6 +101,8 @@ resource "aws_security_group" "cloud_siem_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Admin SSH is open to 0.0.0.0/0 intentionally — key-based auth only (no password login),
+  # kept open rather than IP-scoped to preserve one-command reproducibility for anyone cloning this repo
   ingress {
     description = "Real admin SSH"
     from_port   = var.admin_ssh_port
@@ -95,6 +111,7 @@ resource "aws_security_group" "cloud_siem_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # checkov:skip=CKV_AWS_260:Intentional honeypot bait — isc-agent must be reachable on port 80 to attract web scanners
   ingress {
     description = "Web honeypot"
     from_port   = 80
@@ -103,6 +120,7 @@ resource "aws_security_group" "cloud_siem_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # checkov:skip=CKV_AWS_382:Instance requires unrestricted outbound for Docker image pulls, S3 log sync, and DShield/ISC reporting
   egress {
     description = "Allow all outbound"
     from_port   = 0
@@ -119,6 +137,7 @@ resource "aws_security_group" "cloud_siem_sg" {
 resource "aws_security_group_rule" "grafana" {
   count = var.enable_grafana ? 1 : 0
 
+  description       = "Grafana dashboard access"
   type              = "ingress"
   from_port         = var.grafana_port
   to_port           = var.grafana_port
@@ -179,6 +198,7 @@ resource "aws_iam_user" "canary_decoy" {
   name  = "svc-backup-automation" # a boring name with some plausible deniability
 }
 
+# checkov:skip=CKV_AWS_273:Not a real user account — this is a zero-permission decoy identity for the canary/honeytoken tripwire, SSO is not applicable
 resource "aws_iam_access_key" "canary_decoy" {
   count = var.enable_diy_canary ? 1 : 0
   user  = aws_iam_user.canary_decoy[0].name
@@ -188,8 +208,9 @@ resource "aws_iam_access_key" "canary_decoy" {
 
 # --- SNS topic for canary alerts ---
 resource "aws_sns_topic" "canary_alerts" {
-  count = var.enable_diy_canary ? 1 : 0
-  name  = "cloud-siem-canary-alerts"
+  count             = var.enable_diy_canary ? 1 : 0
+  name              = "cloud-siem-canary-alerts"
+  kms_master_key_id = "alias/aws/sns" # AWS-managed default key, no extra cost, encrypts messages at rest
 }
 
 resource "aws_sns_topic_subscription" "canary_alerts_email" {
