@@ -97,10 +97,10 @@ rm -f "$CANARY_CREDS_FILE"
 
 cat > .env <<EOF
 ENABLE_DSHIELD=${enable_dshield}
-DSHIELD_USERID=${dshield_userid}
-DSHIELD_AUTHKEY=${dshield_authkey}
+DSHIELD_USERID=$(aws ssm get-parameter --name /cloud-siem/dshield_userid --with-decryption --region ${aws_region} --query Parameter.Value --output text)
+DSHIELD_AUTHKEY=$(aws ssm get-parameter --name /cloud-siem/dshield_authkey --with-decryption --region ${aws_region} --query Parameter.Value --output text)
 GRAFANA_ADMIN_USER=${grafana_admin_user}
-GRAFANA_ADMIN_PASSWORD=${grafana_admin_password}
+GRAFANA_ADMIN_PASSWORD=$(aws ssm get-parameter --name /cloud-siem/grafana_admin_password --with-decryption --region ${aws_region} --query Parameter.Value --output text)
 EOF
 
 ## bring up the stack - conditionally include Grafana based on terraform variable

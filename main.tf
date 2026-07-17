@@ -44,13 +44,11 @@ resource "aws_instance" "cloud_siem" {
 
   # checkov:skip=CKV_AWS_46:All values passed to user_data are variable references (var.*), not literal secrets; actual credentials are supplied at apply-time via terraform.tfvars, never committed
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
-    enable_dshield         = var.enable_dshield
-    dshield_userid         = var.dshield_userid
-    dshield_authkey        = var.dshield_authkey
-    grafana_admin_user     = var.grafana_admin_user
-    grafana_admin_password = var.grafana_admin_password
-    enable_grafana         = var.enable_grafana
-    bucket_name            = var.bucket_name
+    aws_region         = var.aws_region
+    enable_dshield     = var.enable_dshield
+    grafana_admin_user = var.grafana_admin_user
+    enable_grafana     = var.enable_grafana
+    bucket_name        = var.bucket_name
 
     enable_thinkst_canary            = var.enable_thinkst_canary
     thinkst_canary_access_key_id     = var.thinkst_canary_access_key_id
@@ -324,3 +322,48 @@ resource "aws_sns_topic_policy" "canary_alerts_policy" {
 
 }
 
+resource "aws_ssm_parameter" "dshield_userid" {
+  #checkov:skip=CKV_AWS_337:Using AWS-managed SSM key (aws/ssm), not a customer-managed CMK — CMK adds $1/mo per key, not justified for this scope. Default key still encrypts at rest via KMS
+  name  = "/cloud-siem/dshield_userid"
+  type  = "SecureString"
+  value = var.dshield_userid
+}
+
+resource "aws_ssm_parameter" "dshield_authkey" {
+  #checkov:skip=CKV_AWS_337:Same as dshield_userid — AWS-managed key sufficient, CMK cost not justified.
+  name  = "/cloud-siem/dshield_authkey"
+  type  = "SecureString"
+  value = var.dshield_authkey
+}
+
+resource "aws_ssm_parameter" "grafana_admin_password" {
+  #checkov:skip=CKV_AWS_337:Same as dshield_userid — AWS-managed key sufficient, CMK cost not justified.
+  name  = "/cloud-siem/grafana_admin_password"
+  type  = "SecureString"
+  value = var.grafana_admin_password
+}
+
+resource "aws_iam_role_policy" "cloud_siem_ssm_policy" {
+  name = "cloud-siem-ssm-read"
+  role = aws_iam_role.cloud_siem_ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = ["ssm:GetParameter", "ssm:GetParametersByPath"]
+        Resource = [
+          aws_ssm_parameter.dshield_userid.arn,
+          aws_ssm_parameter.dshield_authkey.arn,
+          aws_ssm_parameter.grafana_admin_password.arn
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["kms:Decrypt"]
+        Resource = "arn:aws:kms:${var.aws_region}:${data.aws_caller_identity.current.account_id}:alias/aws/ssm"
+      }
+    ]
+  })
+}
