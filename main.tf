@@ -70,6 +70,10 @@ resource "aws_key_pair" "cloud_siem_key" {
   public_key = file(var.public_key_path)
 }
 
+# checkov:skip=CKV_AWS_144:Ephemeral bucket (force_destroy), torn down every session — no durable data to replicate
+# checkov:skip=CKV_AWS_21:Ephemeral bucket, short single-session lifecycle — versioning not meaningful here
+# checkov:skip=CKV_AWS_18:This bucket is itself the log destination; access logging would require a second bucket for marginal value
+# checkov:skip=CKV2_AWS_62:No event-driven automation consumes this bucket currently — future feature, not in scope
 resource "aws_s3_bucket" "cloud_siem_logs" {
   bucket        = var.bucket_name
   force_destroy = true
@@ -193,12 +197,12 @@ resource "aws_iam_instance_profile" "cloud_siem_profile" {
 }
 
 # --- a DIY Canary: zero-permission decoy IAM user ---
+# checkov:skip=CKV_AWS_273:Not a real user account — this is a zero-permission decoy identity for the canary/honeytoken tripwire, SSO is not applicable
 resource "aws_iam_user" "canary_decoy" {
   count = var.enable_diy_canary ? 1 : 0
   name  = "svc-backup-automation" # a boring name with some plausible deniability
 }
 
-# checkov:skip=CKV_AWS_273:Not a real user account — this is a zero-permission decoy identity for the canary/honeytoken tripwire, SSO is not applicable
 resource "aws_iam_access_key" "canary_decoy" {
   count = var.enable_diy_canary ? 1 : 0
   user  = aws_iam_user.canary_decoy[0].name
@@ -266,6 +270,10 @@ resource "aws_s3_bucket_policy" "cloud_siem_trail_bucket_policy" {
   })
 }
 
+# checkov:skip=CKV_AWS_67:Single-region trail is a deliberate cost decision made to keep spend low
+# checkov:skip=CKV_AWS_35:Customer-managed KMS key has ongoing cost not justified for this project's scope; default protections apply
+# checkov:skip=CKV_AWS_252:Redundant with existing canary EventBridge->SNS alerting; a second "log delivered" notification adds noise not signal
+# checkov:skip=CKV2_AWS_10:CloudWatch Logs ingestion adds ongoing cost; raw logs already queried directly from S3
 resource "aws_cloudtrail" "cloud_siem_trail" {
   count                         = var.enable_diy_canary ? 1 : 0
   name                          = "cloud-siem-canary-trail"
@@ -274,6 +282,7 @@ resource "aws_cloudtrail" "cloud_siem_trail" {
   include_global_service_events = true
   is_multi_region_trail         = false
   enable_logging                = true
+  enable_log_file_validation    = true # free integrity check — detects tampering of delivered log files
 
   depends_on = [aws_s3_bucket_policy.cloud_siem_trail_bucket_policy]
 }
