@@ -395,9 +395,9 @@ resource "aws_iam_role_policy" "cloud_siem_route53_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "AllowChangeRecordSetsOnHostedZone"
-        Effect = "Allow"
-        Action = "route53:ChangeResourceRecordSets"
+        Sid      = "AllowChangeRecordSetsOnHostedZone"
+        Effect   = "Allow"
+        Action   = "route53:ChangeResourceRecordSets"
         Resource = "arn:aws:route53:::hostedzone/${var.route53_hosted_zone_id}"
       },
       {
