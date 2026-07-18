@@ -408,7 +408,13 @@ resource "aws_iam_role_policy" "cloud_siem_route53_policy" {
         Effect   = "Allow"
         Action   = "route53:GetChange"
         Resource = "*"
-      }
+      },
+      {
+        Sid      = "AllowListHostedZones"
+        Effect   = "Allow"
+        Action   = ["route53:ListHostedZones", "route53:ListHostedZonesByName"]
+        Resource = "*"
+      },
     ]
   })
 }

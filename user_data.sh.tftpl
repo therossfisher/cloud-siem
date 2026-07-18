@@ -157,7 +157,7 @@ if [ -n "${grafana_domain}" ]; then
     --non-interactive \
     --agree-tos \
     -m "${letsencrypt_email}" \
-    -d "${grafana_domain}"
+    -d "${grafana_domain}" || true
 
   if [ -f "/etc/letsencrypt/live/${grafana_domain}/fullchain.pem" ]; then
     echo "CERTBOT: certificate confirmed at /etc/letsencrypt/live/${grafana_domain}/"
