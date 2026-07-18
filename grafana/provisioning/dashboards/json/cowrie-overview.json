@@ -1,0 +1,49 @@
+{
+  "title": "Cowrie Honeypot Overview",
+  "uid": "cowrie-overview",
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Connections Over Time",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "targets": [
+        {
+          "expr": "count_over_time({job=\"cowrie\"} | json | eventid=\"cowrie.session.connect\" [5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Commands Typed by Attackers",
+      "type": "logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "targets": [
+        {
+          "expr": "{job=\"cowrie\"} | json | eventid=\"cowrie.command.input\" | line_format \"{{.src_ip}} ran: {{.input}}\"",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Top Source IPs",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 18 },
+      "datasource": { "type": "loki", "uid": "Loki" },
+      "targets": [
+        {
+          "expr": "topk(10, sum by (src_ip) (count_over_time({job=\"cowrie\"} | json | eventid=\"cowrie.session.connect\" [6h])))",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}
