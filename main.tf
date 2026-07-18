@@ -222,9 +222,9 @@ resource "aws_iam_access_key" "canary_decoy" {
 
 # --- SNS topic for canary alerts ---
 resource "aws_sns_topic" "canary_alerts" {
-  count             = var.enable_diy_canary ? 1 : 0
-  name              = "cloud-siem-canary-alerts"
-  kms_master_key_id = "alias/aws/sns" # AWS-managed default key, no extra cost, encrypts messages at rest
+  #checkov:skip=CKV_AWS_26:Alert payload is CloudTrail metadata only, no sensitive data. AWS-managed KMS key can't grant EventBridge; CMK not justified for this content.
+  count = var.enable_diy_canary ? 1 : 0
+  name  = "cloud-siem-canary-alerts"
 }
 
 resource "aws_sns_topic_subscription" "canary_alerts_email" {
