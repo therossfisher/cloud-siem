@@ -71,3 +71,6 @@ thinkst_canary_secret_access_key = ""
 # Optional — defaults shown, override if needed
 # enable_dshield = true
 # enable_grafana = true
+
+# Optional: stable IP for CloudFront /admin routing to the web honeypot (Phase 8). See README.
+enable_web_honeypot_routing = false

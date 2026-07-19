@@ -115,3 +115,10 @@ variable "thinkst_canary_secret_access_key" {
   default     = ""
   sensitive   = true
 }
+
+# Variables below this line require some additional AWS console setup beyond setting the variables, refer to README for details.
+variable "enable_web_honeypot_routing" {
+  description = "Allocate a stable Elastic IP for CloudFront path-based routing to the web honeypot (Phase 8). Off by default — no cost impact when false."
+  type        = bool
+  default     = false
+}

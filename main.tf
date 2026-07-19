@@ -418,3 +418,13 @@ resource "aws_iam_role_policy" "cloud_siem_route53_policy" {
     ]
   })
 }
+
+resource "aws_eip" "web_honeypot" {
+  count    = var.enable_web_honeypot_routing ? 1 : 0
+  instance = aws_instance.cloud_siem.id
+  domain   = "vpc"
+
+  tags = {
+    Name = "cloud-siem-web-honeypot-eip"
+  }
+}

@@ -13,4 +13,7 @@ output "s3_bucket_name" {
   value       = aws_s3_bucket.cloud_siem_logs.bucket
 }
 
-
+output "web_honeypot_eip" {
+  description = "Stable public IP for manual CloudFront origin config (Phase 8). Null unless enable_web_honeypot_routing = true. See README."
+  value       = var.enable_web_honeypot_routing ? aws_eip.web_honeypot[0].public_ip : null
+}
