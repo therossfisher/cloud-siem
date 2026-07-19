@@ -5,6 +5,14 @@ terraform {
       version = "~> 5.0"
     }
   }
+ 
+  backend "s3" {
+  bucket       = "cloud-siem-tfstate-rossfisher-is-cool"
+  key          = "cloud-siem/terraform.tfstate"
+  region       = "us-east-1"
+  encrypt      = true
+  use_lockfile = true
+ }
 }
 
 provider "aws" {
