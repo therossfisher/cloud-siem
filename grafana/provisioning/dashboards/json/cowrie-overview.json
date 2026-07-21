@@ -102,7 +102,7 @@
       "datasource": { "type": "loki", "uid": "Loki" },
       "targets": [
         {
-          "expr": "count_over_time({job=\"isc-agent\"} | json | sip != \"$exclude_ip\" [5m])",
+          "expr": "sum(count_over_time({job=\"isc-agent\"} | json | sip != \"$exclude_ip\" [5m]))",
           "refId": "A"
         }
       ]
